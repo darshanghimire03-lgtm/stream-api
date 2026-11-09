@@ -1,0 +1,209 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stream API Player</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 24px;
+  background: #101419;
+  color: #f3f5f7;
+  font-family: Arial, sans-serif;
+}
+
+.container {
+  max-width: 850px;
+  margin: 35px auto;
+}
+
+h1 {
+  font-size: 26px;
+}
+
+.subtitle {
+  color: #929da9;
+  font-size: 14px;
+}
+
+.form {
+  display: flex;
+  gap: 10px;
+  margin: 25px 0;
+}
+
+input {
+  flex: 1;
+  min-width: 0;
+  padding: 14px;
+  background: #1b222a;
+  color: white;
+  border: 1px solid #303b46;
+  border-radius: 9px;
+  outline: none;
+}
+
+button {
+  background: #2584d8;
+  color: white;
+  border: none;
+  padding: 0 20px;
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.player {
+  background: #050607;
+  border-radius: 12px;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+video, iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  object-fit: contain;
+}
+
+.message {
+  color: #9ba8b4;
+  text-align: center;
+  padding: 20px;
+}
+
+#status {
+  color: #aab6c2;
+  font-size: 13px;
+  margin-top: 15px;
+  overflow-wrap: anywhere;
+}
+
+@media(max-width: 500px) {
+  body { padding: 15px; }
+  .form { flex-direction: column; }
+  button { padding: 14px; }
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h1>Stream API</h1>
+<p class="subtitle">External video playback testing player</p>
+
+<form class="form" id="form">
+  <input
+    id="url"
+    type="url"
+    placeholder="Paste video URL here..."
+    required
+  >
+  <button type="submit">Play Video</button>
+</form>
+
+<div class="player" id="player">
+  <div class="message">Your video will appear here</div>
+</div>
+
+<div id="status">Ready</div>
+
+</div>
+
+<script>
+const form = document.getElementById("form");
+const input = document.getElementById("url");
+const player = document.getElementById("player");
+const statusText = document.getElementById("status");
+
+function showMessage(message) {
+  player.replaceChildren();
+
+  const text = document.createElement("div");
+  text.className = "message";
+  text.textContent = message;
+
+  player.appendChild(text);
+}
+
+function playVideo(data) {
+  player.replaceChildren();
+
+  if (data.type === "mp4" || data.type === "hls") {
+    const video = document.createElement("video");
+
+    video.controls = true;
+    video.playsInline = true;
+    video.preload = "metadata";
+    video.src = data.streamUrl;
+
+    if (data.type === "hls") {
+      video.setAttribute("controlsList", "nodownload");
+    }
+
+    player.appendChild(video);
+    statusText.textContent =
+      "Provider: " + data.provider + " | Type: " + data.type;
+
+    return;
+  }
+
+  if (data.type === "embed") {
+    const frame = document.createElement("iframe");
+
+    frame.src = data.embedUrl;
+    frame.allow = "autoplay; fullscreen; picture-in-picture";
+    frame.allowFullscreen = true;
+    frame.referrerPolicy = "strict-origin-when-cross-origin";
+
+    player.appendChild(frame);
+
+    statusText.textContent =
+      "Provider: " + data.provider + " | Type: embed";
+
+    return;
+  }
+
+  showMessage("Unsupported playback type");
+}
+
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const url = input.value.trim();
+
+  showMessage("Resolving video...");
+  statusText.textContent = "Connecting to API...";
+
+  try {
+    const response = await fetch(
+      "/api/video?url=" + encodeURIComponent(url)
+    );
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || "Unable to resolve video");
+    }
+
+    playVideo(result.data);
+
+  } catch (error) {
+    showMessage(error.message);
+    statusText.textContent = "Playback failed";
+  }
+});
+</script>
+</body>
+</html>
