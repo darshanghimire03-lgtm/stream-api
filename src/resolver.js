@@ -1,155 +1,83 @@
 
-const ALLOWED_HOSTS = {
-  dailymotion: [
-    "dailymotion.com",
-    "www.dailymotion.com",
-    "geo.dailymotion.com",
-    "dai.ly"
-  ],
-  youtube: [
-    "youtube.com",
-    "www.youtube.com",
-    "m.youtube.com",
-    "youtu.be",
-    "youtube-nocookie.com",
-    "www.youtube-nocookie.com"
-  ],
-  vimeo: [
-    "vimeo.com",
-    "www.vimeo.com",
-    "player.vimeo.com"
-  ]
-};
+const { execFile } = require("node:child_process");
+const { promisify } = require("node:util");
+const { validatePublicUrl } = require("./inspector");
 
-function hostMatches(host, list) {
-  return list.includes(host);
-}
+const exec = promisify(execFile);
 
-function resolveVideo(value) {
-  if (typeof value !== "string" || !value.trim()) {
-    throw new Error("Video URL is required");
-  }
+async function resolveVideo(value) {
+  const url = await validatePublicUrl(value);
 
-  if (value.length > 4096) {
-    throw new Error("URL is too long");
-  }
-
-  let url;
+  let stdout;
 
   try {
-    url = new URL(value.trim());
+    const result = await exec(
+      "python3",
+      [
+        "-m",
+        "yt_dlp",
+        "--dump-single-json",
+        "--no-warnings",
+        "--no-playlist",
+        "--skip-download",
+        "--socket-timeout",
+        "15",
+        "--",
+        url.href
+      ],
+      {
+        timeout: 60000,
+        maxBuffer: 8 * 1024 * 1024,
+        windowsHide: true
+      }
+    );
+
+    stdout = result.stdout;
+  } catch (error) {
+    const details = String(error.stderr || error.message)
+      .slice(0, 1000);
+
+    throw new Error("Extraction failed: " + details);
+  }
+
+  let info;
+
+  try {
+    info = JSON.parse(stdout);
   } catch {
-    throw new Error("Invalid URL");
+    throw new Error("Extractor returned invalid information");
   }
 
-  if (
-    url.protocol !== "https:" ||
-    url.username ||
-    url.password ||
-    url.port
-  ) {
-    throw new Error("Only valid HTTPS URLs are accepted");
-  }
+  const formats = (info.formats || [])
+    .filter(format => format.url)
+    .map(format => ({
+      id: format.format_id,
+      format: format.format,
+      ext: format.ext,
+      resolution: format.resolution,
+      width: format.width,
+      height: format.height,
+      fps: format.fps,
+      videoCodec: format.vcodec,
+      audioCodec: format.acodec,
+      protocol: format.protocol,
+      filesize: format.filesize || format.filesize_approx,
+      url: format.url
+    }))
+    .slice(0, 40);
 
-  const host = url.hostname.toLowerCase();
-
-  // Dailymotion
-  if (hostMatches(host, ALLOWED_HOSTS.dailymotion)) {
-    let id = "";
-
-    if (host === "dai.ly") {
-      id = url.pathname.split("/").filter(Boolean)[0] || "";
-    } else {
-      id =
-        url.pathname.match(
-          /^\/(?:video\/|embed\/video\/)([a-zA-Z0-9_-]+)/
-        )?.[1] || "";
-    }
-
-    if (!/^[a-zA-Z0-9_-]{3,30}$/.test(id)) {
-      throw new Error("Invalid Dailymotion video ID");
-    }
-
-    return {
-      success: true,
-      platform: "dailymotion",
-      type: "embed",
-      id,
-      embedUrl: `https://www.dailymotion.com/embed/video/${id}`
-    };
-  }
-
-  // YouTube
-  if (hostMatches(host, ALLOWED_HOSTS.youtube)) {
-    let id = "";
-
-    if (host === "youtu.be") {
-      id = url.pathname.split("/").filter(Boolean)[0] || "";
-    } else {
-      id =
-        url.searchParams.get("v") ||
-        url.pathname.match(
-          /^\/(?:embed|shorts|live)\/([a-zA-Z0-9_-]+)/
-        )?.[1] || "";
-    }
-
-    if (!/^[a-zA-Z0-9_-]{11}$/.test(id)) {
-      throw new Error("Invalid YouTube video ID");
-    }
-
-    return {
-      success: true,
-      platform: "youtube",
-      type: "embed",
-      id,
-      embedUrl: `https://www.youtube-nocookie.com/embed/${id}`
-    };
-  }
-
-  // Vimeo
-  if (hostMatches(host, ALLOWED_HOSTS.vimeo)) {
-    const id = url.pathname.match(/\/(\d+)(?:\/|$)/)?.[1];
-
-    if (!id) {
-      throw new Error("Invalid Vimeo video ID");
-    }
-
-    return {
-      success: true,
-      platform: "vimeo",
-      type: "embed",
-      id,
-      embedUrl: `https://player.vimeo.com/video/${id}`
-    };
-  }
-
-  // Direct MP4 / WebM / OGG / HLS
-  const path = url.pathname.toLowerCase();
-
-  const formats = {
-    ".mp4": "video",
-    ".webm": "video",
-    ".ogg": "video",
-    ".m3u8": "hls"
+  return {
+    success: true,
+    extractor: info.extractor,
+    title: info.title,
+    description: info.description,
+    webpageUrl: info.webpage_url,
+    thumbnail: info.thumbnail,
+    duration: info.duration,
+    uploader: info.uploader,
+    formats,
+    formatCount: formats.length
   };
-
-  const extension = Object.keys(formats).find(ext =>
-    path.endsWith(ext)
-  );
-
-  if (extension) {
-    return {
-      success: true,
-      platform: "direct",
-      type: formats[extension],
-      format: extension.substring(1),
-      videoUrl: url.href
-    };
-  }
-
-  throw new Error(
-    "Unsupported source. Use Dailymotion, YouTube, Vimeo, MP4, WebM or M3U8."
-  );
 }
 
 module.exports = { resolveVideo };
