@@ -1,93 +1,32 @@
 
 # Stream API
 
-A video playback API for Android applications and websites.
-
-## Features
-
-- MP4 playback
-- HLS M3U8 support
-- YouTube embeds
-- Dailymotion embeds
-- External iframe embeds
-- REST API
-- Browser testing player
-- Render deployment
+Multi-platform video playback API.
 
 ## Installation
 
-Clone the repository:
-
-```bash
-git clone https://github.com/YOUR_USERNAME/stream-api.git
-```
-
-Enter the project:
-
-```bash
-cd stream-api
-```
-
-Install dependencies:
-
-```bash
 npm install
-```
 
-Start the server:
+## Run
 
-```bash
 npm start
-```
 
-Open:
-
-http://localhost:3000
-
-## API
-
-### Health
+## API endpoints
 
 GET /api/health
 
-### Resolve video
+GET /api/video/resolve?url=VIDEO_URL
 
-GET /api/video?url=VIDEO_URL
+POST /api/video/resolve
 
-Example:
+## Supported sources
 
-```text
-/api/video?url=https://www.dailymotion.com/video/x36gl5
-```
+- Dailymotion
+- YouTube
+- Vimeo
+- Direct MP4
+- HLS / M3U8
 
-### Player
+## Example
 
-GET /player
-
-## Deployment
-
-Deploy this repository using Render.
-
-Build command:
-
-npm install
-
-Start command:
-
-npm start
-
-Health check:
-
-/api/health
-
-## Important
-
-This API identifies supported URLs and generates
-authorized playback/embed information.
-
-It does not bypass DRM, authentication,
-or website playback restrictions.
-
-## License
-
-MIT
+GET /api/video/resolve?url=https%3A%2F%2Fwww.dailymotion.com%2Fvideo%2Fxbv8hsm

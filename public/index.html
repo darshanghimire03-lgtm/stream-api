@@ -4,206 +4,394 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stream API Player</title>
+<title>Stream API</title>
+
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
 
 <style>
 * {
+  margin: 0;
+  padding: 0;
   box-sizing: border-box;
 }
 
 body {
-  margin: 0;
-  padding: 24px;
-  background: #101419;
-  color: #f3f5f7;
+  background: #101216;
+  color: #f5f6f8;
   font-family: Arial, sans-serif;
+  padding: 25px 16px;
 }
 
 .container {
+  width: 100%;
   max-width: 850px;
-  margin: 35px auto;
+  margin: auto;
 }
 
-h1 {
-  font-size: 26px;
+header {
+  margin-bottom: 28px;
+}
+
+.logo {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.logo span {
+  color: #56a6ff;
 }
 
 .subtitle {
-  color: #929da9;
-  font-size: 14px;
+  color: #9298a3;
+  font-size: 13px;
+  margin-top: 8px;
 }
 
-.form {
+.panel {
+  background: #191d24;
+  border: 1px solid #292e38;
+  padding: 20px;
+  border-radius: 14px;
+  margin-bottom: 18px;
+}
+
+h2 {
+  font-size: 16px;
+  margin-bottom: 15px;
+}
+
+.input-group {
   display: flex;
   gap: 10px;
-  margin: 25px 0;
 }
 
 input {
-  flex: 1;
   min-width: 0;
+  flex: 1;
   padding: 14px;
-  background: #1b222a;
-  color: white;
-  border: 1px solid #303b46;
+  background: #101319;
+  border: 1px solid #303744;
   border-radius: 9px;
   outline: none;
+  color: white;
+  font-size: 14px;
+}
+
+input:focus {
+  border-color: #56a6ff;
 }
 
 button {
-  background: #2584d8;
-  color: white;
   border: none;
+  background: #287edb;
+  color: white;
   padding: 0 20px;
   border-radius: 9px;
+  font-weight: 600;
   cursor: pointer;
 }
 
+button:disabled {
+  opacity: .6;
+  cursor: wait;
+}
+
 .player {
-  background: #050607;
-  border-radius: 12px;
-  overflow: hidden;
+  width: 100%;
   aspect-ratio: 16 / 9;
+  background: #080a0e;
+  border-radius: 11px;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-video, iframe {
+.player iframe,
+.player video {
   width: 100%;
   height: 100%;
-  border: 0;
-  object-fit: contain;
+  border: none;
+  display: block;
 }
 
-.message {
-  color: #9ba8b4;
+.placeholder {
+  color: #777f8c;
   text-align: center;
+  font-size: 14px;
   padding: 20px;
 }
 
-#status {
-  color: #aab6c2;
+.status {
+  color: #9ba3b0;
   font-size: 13px;
-  margin-top: 15px;
+  margin-top: 14px;
   overflow-wrap: anywhere;
 }
 
-@media(max-width: 500px) {
-  body { padding: 15px; }
-  .form { flex-direction: column; }
-  button { padding: 14px; }
+.error {
+  color: #ff7777;
+}
+
+.info {
+  color: #67b5ff;
+}
+
+.platforms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.tag {
+  background: #252c37;
+  color: #b7c4d5;
+  padding: 7px 11px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+
+@media(max-width: 550px) {
+  .input-group {
+    flex-direction: column;
+  }
+
+  button {
+    min-height: 46px;
+  }
+
+  body {
+    padding: 18px 12px;
+  }
 }
 </style>
 </head>
 
 <body>
+
 <div class="container">
 
-<h1>Stream API</h1>
-<p class="subtitle">External video playback testing player</p>
+<header>
+  <div class="logo">Stream <span>API</span></div>
+  <div class="subtitle">
+    Multi-platform video playback testing player
+  </div>
+</header>
 
-<form class="form" id="form">
-  <input
-    id="url"
-    type="url"
-    placeholder="Paste video URL here..."
-    required
-  >
-  <button type="submit">Play Video</button>
-</form>
+<section class="panel">
 
-<div class="player" id="player">
-  <div class="message">Your video will appear here</div>
-</div>
+  <h2>Video URL</h2>
 
-<div id="status">Ready</div>
+  <div class="input-group">
+    <input
+      id="videoUrl"
+      type="url"
+      placeholder="Paste video URL here..."
+      autocomplete="off"
+    >
+
+    <button id="playBtn" onclick="playVideo()">
+      Play Video
+    </button>
+  </div>
+
+  <div class="platforms">
+    <span class="tag">Dailymotion</span>
+    <span class="tag">YouTube</span>
+    <span class="tag">Vimeo</span>
+    <span class="tag">MP4</span>
+    <span class="tag">HLS</span>
+  </div>
+
+</section>
+
+<section class="panel">
+
+  <h2>Video Player</h2>
+
+  <div class="player" id="player">
+    <div class="placeholder">
+      Your video will appear here
+    </div>
+  </div>
+
+  <div id="status" class="status">
+    Ready
+  </div>
+
+</section>
+
+<section class="panel">
+  <h2>API Information</h2>
+  <div class="status" id="apiInfo">
+    API: Checking...
+  </div>
+</section>
 
 </div>
 
 <script>
-const form = document.getElementById("form");
-const input = document.getElementById("url");
+const input = document.getElementById("videoUrl");
 const player = document.getElementById("player");
 const statusText = document.getElementById("status");
+const playBtn = document.getElementById("playBtn");
+const apiInfo = document.getElementById("apiInfo");
 
-function showMessage(message) {
-  player.replaceChildren();
+let currentHls = null;
 
-  const text = document.createElement("div");
-  text.className = "message";
-  text.textContent = message;
-
-  player.appendChild(text);
+function setStatus(message, type = "") {
+  statusText.textContent = message;
+  statusText.className = "status " + type;
 }
 
-function playVideo(data) {
-  player.replaceChildren();
-
-  if (data.type === "mp4" || data.type === "hls") {
-    const video = document.createElement("video");
-
-    video.controls = true;
-    video.playsInline = true;
-    video.preload = "metadata";
-    video.src = data.streamUrl;
-
-    if (data.type === "hls") {
-      video.setAttribute("controlsList", "nodownload");
-    }
-
-    player.appendChild(video);
-    statusText.textContent =
-      "Provider: " + data.provider + " | Type: " + data.type;
-
-    return;
+function clearPlayer() {
+  if (currentHls) {
+    currentHls.destroy();
+    currentHls = null;
   }
 
-  if (data.type === "embed") {
-    const frame = document.createElement("iframe");
-
-    frame.src = data.embedUrl;
-    frame.allow = "autoplay; fullscreen; picture-in-picture";
-    frame.allowFullscreen = true;
-    frame.referrerPolicy = "strict-origin-when-cross-origin";
-
-    player.appendChild(frame);
-
-    statusText.textContent =
-      "Provider: " + data.provider + " | Type: embed";
-
-    return;
-  }
-
-  showMessage("Unsupported playback type");
+  player.innerHTML = "";
 }
 
-form.addEventListener("submit", async (event) => {
-  event.preventDefault();
-
+async function playVideo() {
   const url = input.value.trim();
 
-  showMessage("Resolving video...");
-  statusText.textContent = "Connecting to API...";
+  if (!url) {
+    setStatus("Please enter a video URL", "error");
+    return;
+  }
+
+  playBtn.disabled = true;
+  playBtn.textContent = "Loading...";
+
+  clearPlayer();
+  setStatus("Detecting video source...", "info");
 
   try {
     const response = await fetch(
-      "/api/video?url=" + encodeURIComponent(url)
+      "/api/video/resolve?url=" + encodeURIComponent(url)
     );
 
-    const result = await response.json();
+    const data = await response.json();
 
-    if (!response.ok || !result.success) {
-      throw new Error(result.error || "Unable to resolve video");
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || "Unable to resolve video");
     }
 
-    playVideo(result.data);
+    if (data.type === "embed") {
+      const iframe = document.createElement("iframe");
+
+      iframe.src = data.embedUrl;
+      iframe.allow =
+        "autoplay; fullscreen; picture-in-picture; encrypted-media";
+      iframe.allowFullscreen = true;
+      iframe.referrerPolicy = "strict-origin-when-cross-origin";
+
+      player.appendChild(iframe);
+
+      setStatus(
+        "Platform: " + data.platform +
+        " | Video ID: " + data.id,
+        "info"
+      );
+    }
+
+    else if (data.type === "video") {
+      const video = document.createElement("video");
+
+      video.src = data.videoUrl;
+      video.controls = true;
+      video.playsInline = true;
+      video.preload = "metadata";
+
+      player.appendChild(video);
+
+      setStatus("Direct video player ready", "info");
+    }
+
+    else if (data.type === "hls") {
+      const video = document.createElement("video");
+
+      video.controls = true;
+      video.playsInline = true;
+      video.preload = "metadata";
+
+      player.appendChild(video);
+
+      if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        video.src = data.videoUrl;
+      }
+
+      else if (window.Hls && Hls.isSupported()) {
+        currentHls = new Hls();
+
+        currentHls.loadSource(data.videoUrl);
+        currentHls.attachMedia(video);
+
+        currentHls.on(Hls.Events.ERROR, function(event, info) {
+          if (info.fatal) {
+            setStatus("HLS playback failed: " + info.details, "error");
+          }
+        });
+      }
+
+      else {
+        throw new Error("HLS is not supported on this browser");
+      }
+
+      setStatus("HLS player ready", "info");
+    }
 
   } catch (error) {
-    showMessage(error.message);
-    statusText.textContent = "Playback failed";
+    player.innerHTML = `
+      <div class="placeholder">
+        ${escapeHTML(error.message)}
+      </div>
+    `;
+
+    setStatus(error.message, "error");
+  }
+
+  finally {
+    playBtn.disabled = false;
+    playBtn.textContent = "Play Video";
+  }
+}
+
+function escapeHTML(value) {
+  return String(value).replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;"
+  })[char]);
+}
+
+input.addEventListener("keydown", event => {
+  if (event.key === "Enter") {
+    playVideo();
   }
 });
+
+async function checkAPI() {
+  try {
+    const response = await fetch("/api/health");
+    const data = await response.json();
+
+    apiInfo.textContent =
+      data.name + " v" + data.version + " | " + data.status;
+  } catch {
+    apiInfo.textContent = "API connection failed";
+  }
+}
+
+checkAPI();
+
+// Test video
+input.value = "https://www.dailymotion.com/video/xbv8hsm";
 </script>
+
 </body>
 </html>
